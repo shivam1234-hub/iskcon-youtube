@@ -1,5 +1,12 @@
 # ISKCON Tube
 
+<p><a href="https://github.com/shivam1234-hub/iskcon-youtube/releases/latest/download/ISKCON-YouTube.apk"><b>⬇️ Download APK</b></a> · <a href="https://github.com/shivam1234-hub/iskcon-youtube/releases/latest">all versions</a><br><sub>Android: open the downloaded file and tap Install. You may need to allow installs from your browser first.</sub></p>
+
+## Screenshots
+
+<table><tr><td align="center"><img src="docs/screenshots/yt-home.jpg" width="200"><br><sub>Home</sub></td><td align="center"><img src="docs/screenshots/yt-shorts.jpg" width="200"><br><sub>Shorts</sub></td><td align="center"><img src="docs/screenshots/yt-watch.jpg" width="200"><br><sub>Watching a video</sub></td></tr></table>
+
+
 A general YouTube client for Android: search anything, browse channels, keep subscriptions,
 history and a Watch later list on the phone. Built from the Maharaj Vani app's player and
 picture-in-picture code (Expo SDK 54 / React Native 0.81 / Expo Router).
