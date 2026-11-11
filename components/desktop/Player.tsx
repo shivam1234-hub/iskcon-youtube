@@ -142,12 +142,18 @@ const YouTubePlayer = forwardRef<PlayerHandle, {
   }, []);
 
   const onLoad = () => {
+    // The handshake, then subscribe to the events the IFrame API would
+    // (without the subscription a later loadVideoById reports no onError).
     const listen = () => {
       try {
-        frame.current?.contentWindow?.postMessage(
-          JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }),
-          '*',
-        );
+        const w = frame.current?.contentWindow;
+        w?.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        for (const ev of ['onReady', 'onStateChange', 'onError']) {
+          w?.postMessage(
+            JSON.stringify({ event: 'command', func: 'addEventListener', args: [ev], id: 1, channel: 'widget' }),
+            '*',
+          );
+        }
       } catch {}
     };
     listen();

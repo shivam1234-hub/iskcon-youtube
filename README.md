@@ -77,3 +77,34 @@ TV channels, status/remix clips, films, named non-ISKCON gurus) **and** at least
 - it pairs a devotee form of address (Prabhuji, Maharaj, Swami, Das, Mataji, HG, HH) with a devotional subject
 
 To trust another channel, add its `UC...` id to `TRUSTED` in `utils/iskcon.ts`.
+
+## Windows desktop app
+
+`desktop/` is an Electron shell (Electron 44.4.4, electron-builder 26.15.3) over the Expo
+**web** export. The desktop UI is web-only (`app/**/*.web.tsx`, `components/desktop/`): a
+YouTube-desktop layout with a masthead search box, left guide, home grid, list-style results,
+a two-column watch page, channel / History / Watch later / Hidden channels / Settings pages,
+light and dark themes. The phone UI is untouched; both share `utils/`, `contexts/` and
+`hooks/useHomeFeed.ts` / `hooks/useSubscriptionFeed.ts`, so every list goes through the same
+`utils/iskcon.ts` rules.
+
+```bash
+npm run desktop:install   # once
+npm run desktop           # export the web bundle and open the app
+npm run desktop:build     # desktop/release/YouTube-Setup-<v>.exe + YouTube-<v>-portable.exe
+```
+
+How it differs from the phone:
+
+| Phone | Desktop |
+| --- | --- |
+| `fetch` to youtube.com | `utils/ytFetch.web.ts` asks the main process (`desktop/lib/net.js`): a browser renderer would hit CORS |
+| WebView wrapper page with a third-party baseUrl | iframe served from `http://127.0.0.1:47830` (fixed port, so localStorage persists) — the embed needs a real referrer or it fails with error 153 |
+| Picture-in-picture (Float) | always-on-top mini player window (`desktop/float.html`) |
+| Notification + earphone buttons | media keys (globalShortcut, held only on the watch page) |
+| Voice search | hidden: Chromium's speech API in Electron fails with a `network` error |
+| Long-press menu | hover ⋯ button and right-click |
+
+Running from source on a Mac behind a TLS-intercepting proxy: `YT_DESKTOP_INSECURE=1`
+(never set in a shipped build). `YT_SHOTS=<plan.json>` drives the screenshot harness in
+`desktop/main.js`. If `ELECTRON_RUN_AS_NODE` is set in your shell, unset it first.

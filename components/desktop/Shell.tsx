@@ -182,7 +182,7 @@ function SearchBox() {
             }}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             onKeyPress={onKeyPress}
-            placeholder="Search"
+            placeholder="Search YouTube"
             placeholderTextColor={t.textMute}
             style={web({
               flex: 1, height: 38, fontSize: 16, color: t.text, fontFamily: FONT, outlineStyle: 'none',
@@ -471,7 +471,7 @@ export default function DesktopShell({ children }: { children: React.ReactNode }
   const t = useT();
   const { width } = useWindowDimensions();
   const pathname = usePathname();
-  const onWatch = pathname.startsWith('/watch');
+  const onWatch = pathname.startsWith('/watch/');
   const wide = width >= WIDE;
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);

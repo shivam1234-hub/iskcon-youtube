@@ -243,7 +243,7 @@ export default function LibraryScreen() {
                     onPress={() => openChannel(s)}
                     style={({ hovered }: any) =>
                       web({
-                        width: 300, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12,
+                        width: 380, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12,
                         borderRadius: 12, cursor: 'pointer', backgroundColor: hovered ? t.hover : t.chip,
                       })
                     }

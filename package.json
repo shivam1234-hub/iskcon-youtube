@@ -6,7 +6,10 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "desktop": "npm --prefix desktop run dev",
+    "desktop:build": "npm --prefix desktop run dist",
+    "desktop:install": "npm --prefix desktop install"
   },
   "license": "ISC",
   "dependencies": {

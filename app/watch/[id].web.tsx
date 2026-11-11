@@ -146,6 +146,14 @@ export default function WatchScreen() {
   );
   const playOtherRef = useRef(playOther);
   playOtherRef.current = playOther;
+  // Development hook for the screenshot harness (desktop/main.js YT_SHOTS).
+  useEffect(() => {
+    (window as any).__ytSwap = (id: string) =>
+      playOtherRef.current({ videoId: id, title: '', channel: '', durationSec: null });
+    return () => {
+      delete (window as any).__ytSwap;
+    };
+  }, []);
 
   // ---- details + Up next ---------------------------------------------------
   useEffect(() => {
@@ -331,6 +339,7 @@ export default function WatchScreen() {
 
   const onPlayerEvent = useCallback((e: PlayerEvent) => {
     const id = currentRef.current.video.videoId;
+    if (e.type !== 'time' && (window as any).__ytDebug) console.log('[player]', id, JSON.stringify(e));
     switch (e.type) {
       case 'ready':
         setLoading(false);
@@ -340,6 +349,7 @@ export default function WatchScreen() {
         break;
       case 'error':
         setLoading(false);
+        setPlaying(false);
         setFailure(playerErrorText(e.code));
         break;
       case 'duration':
@@ -360,6 +370,11 @@ export default function WatchScreen() {
         if (e.state === 'playing') setPlaying(true);
         else if (e.state === 'paused') setPlaying(false);
         else if (e.state === 'ended') {
+          // A video that fails to load right after a swap can report "ended";
+          // only a real end (near the duration) moves on.
+          const sinceSwap = Date.now() - swapAtRef.current;
+          const nearEnd = durationRef.current <= 0 || timeRef.current >= durationRef.current - 5;
+          if (sinceSwap < 4000 || !nearEnd) break;
           setPlaying(false);
           updatePosition(id, durationRef.current, durationRef.current);
           timeRef.current = 0;
