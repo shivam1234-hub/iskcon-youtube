@@ -67,6 +67,9 @@ const TRUSTED: [string, string][] = [
   ['UCQidfTbPXE9z_GQShqa9cjg', 'Gaura Vani'],
   ['UCMhMOiv7TftjZCr-hdpwJpg', 'Madhavas Rock Band'],
   ['UCDJVpt2p_KivFy4Bfms64Ew', 'Jahnavi Harrison'],
+  // ISKCON's own news service (iskconnews.org); the only channel allowed past
+  // the NEWS block below.
+  ['UCvGFcGHY8-m3Dp-l5InP67g', 'ISKCON News'],
 ];
 
 export const TRUSTED_IDS = new Set(TRUSTED.map(([id]) => id));
@@ -148,6 +151,46 @@ const BLOCK: RegExp[] = [
 ];
 
 /**
+ * News and current-affairs content. Titles like "ISKCON vs ISKCON: who owns
+ * ...? | Reporter Uncut | News 24" name ISKCON, so the strong-term rule let
+ * them in, and learnFrom() then trusted the whole news channel. Matched on
+ * title and channel name. Unlike BLOCK, a channel in TRUSTED (by id only, not
+ * a learned one) is exempt, so ISKCON News still shows.
+ */
+const NEWS: RegExp[] = [
+  /\bnews ?\d*\b/, /\breporters?\b/, /\buncut\b/, /\bbreaking\b/, /\bheadlines?\b/,
+  /\bprime time\b/, /\bbulletin\b/, /\blive updates?\b/,
+  /\bpress conference\b/, /\bsupreme court\b/, /\bhigh court\b/,
+  /\barrest(ed)?\b/, /\bbjp\b/, /\bcongress party\b/, /\bmaneka\b/,
+  /\baaj ?tak\b/, /\bndtv\b/, /\babp\b/, /\btv ?9\b/, /\bindia ?tv\b/, /\bindia today\b/, /\brepublic\b/,
+  /\bibc ?24\b/, /\bnews ?18\b/, /\btimes now\b/, /\blallantop\b/, /\bbbc\b/, /\bdainik\b/,
+  /\bbharat ?24\b/, /\bjagran\b/, /\bamar ujala\b/,
+  // Controversy / current-affairs wording.
+  /\bcontroversy\b/, /\bcontroversial\b/, /\brow\b/, /\bscam\b/, /\bexpos(e|es|ed)\b/,
+  /\bcomplaint\b/, /\bprotests?\b/, /\bblackmail\b/, /\ballegations?\b/, /\blawsuit\b/,
+  /\bdark side\b/, /\binsults?\b/, /\bwhy i left\b/, /\bfumes\b/, /\bjre\b/, /\bjoe rogan\b/,
+  /\bfroze\b/, /\bmoratorium\b/, /\breality\b/,
+  /\bpolice\b/, /\bban\b/, /\bbanned\b/, /\bu-turn\b/, /\bfda\b/, /\bvs\b/,
+  /न्यूज़/, /न्यूज/, /समाचार/, /खबर/, /ख़बर/, /ब्रेकिंग/, /রিপোর্ট/, /নিউজ/, /সংবাদ/,
+];
+
+/** News-outlet style channel names (checked on the channel name only). */
+const NEWS_CHANNEL: RegExp[] = [
+  // Not a bare "tv": many devotional channels are called "... TV".
+  /\botv\b/, /\bkalinga tv\b/, /\bntt\b/, /\bcapital gate\b/, /\btoday\b/, /\bpost\b/,
+  /\btimes\b/, /\bexpress\b/, /\bherald\b/, /\btribune\b/, /\bchronicle\b/, /\bkhabar\b/,
+  /\bsamachar\b/,
+  /\bstruggle for truth\b/,
+];
+
+function isNews(v: { title?: string; channel?: string; channelId?: string }): boolean {
+  if (v.channelId && TRUSTED_IDS.has(v.channelId)) return false;
+  const ch = norm(v.channel);
+  const text = `${norm(v.title)} | ${ch}`;
+  return NEWS.some((re) => re.test(text)) || NEWS_CHANNEL.some((re) => re.test(ch));
+}
+
+/**
  * Keeps Shorts out of the ordinary feeds (they get their own tab). Not
  * applied on the Shorts tab itself.
  */
@@ -223,6 +266,7 @@ function isBlocked(v: VideoResult, short = false): boolean {
     if (v.durationSec != null && v.durationSec < MIN_SECONDS && !v.isLive) return true;
     if (SHORT_FORMAT.some((re) => re.test(text))) return true;
   }
+  if (isNews(v)) return true;
   return BLOCK.some((re) => re.test(text)) || NOT_ISKCON.some((k) => text.includes(k));
 }
 
@@ -307,6 +351,7 @@ export function isIskconChannel(c: Pick<ChannelResult, 'channelId' | 'title'>): 
   if (isHiddenChannel(c.channelId, c.title)) return false;
   const t = norm(c.title);
   if ([...BLOCK, ...SHORT_FORMAT].some((re) => re.test(t))) return false;
+  if (isNews({ channel: c.title, channelId: c.channelId })) return false;
   if (isTrustedChannel(c.channelId)) return true;
   if (BLOCK.some((re) => re.test(t)) || NOT_ISKCON.some((k) => t.includes(k))) return false;
   // "Kartikeya Das", "HH Bhakti ... Swami": a devotee's own channel. Its
@@ -333,7 +378,7 @@ export function iskconSuggestPrefix(q: string): string {
 /** Plain-text check (suggestions, recent searches). */
 export function isIskconText(t: string): boolean {
   const n = norm(t);
-  return hasStrong(n) && ![...BLOCK, ...SHORT_FORMAT].some((re) => re.test(n));
+  return hasStrong(n) && ![...BLOCK, ...SHORT_FORMAT, ...NEWS].some((re) => re.test(n));
 }
 
 // ---------------------------------------------------------------------------

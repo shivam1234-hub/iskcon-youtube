@@ -2,7 +2,7 @@
 
 const {
   app, BrowserWindow, Menu, clipboard, dialog, globalShortcut, ipcMain, nativeTheme, screen,
-  session, shell,
+  session,
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -69,22 +69,19 @@ function bgColor() {
 }
 
 function guardNavigation(win) {
-  // Links the app itself opens ("Watch on YouTube") go to the browser. Clicks
-  // inside the embedded player (logo, title, end-screen videos) are swallowed,
-  // as on the phone: they would lead into the full, unfiltered YouTube.
-  win.webContents.setWindowOpenHandler(({ url, referrer }) => {
-    const fromApp = !referrer?.url || referrer.url.startsWith(origin);
-    if (fromApp && /^https?:/.test(url) && !url.startsWith(origin)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
+  // Nothing in the app may open youtube.com (or anything else) in the system
+  // browser: real YouTube is unfiltered. New windows are always refused —
+  // including the player's own logo / title / end-screen / "Watch on YouTube"
+  // links — and the page may only navigate within the app's own origin.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(origin)) {
-      event.preventDefault();
-      if (/^https?:/.test(url)) shell.openExternal(url);
-    }
+    if (!url.startsWith(origin)) event.preventDefault();
   });
   win.webContents.on('will-frame-navigate', (event) => {
-    if (event.isMainFrame) return;
+    if (event.isMainFrame) {
+      if (!(event.url || '').startsWith(origin)) event.preventDefault();
+      return;
+    }
     const url = event.url || '';
     // The player frame may only ever show an embed.
     if (/^https:\/\/(www\.)?youtube(-nocookie)?\.com\//.test(url) && !/\/embed\//.test(url)) {

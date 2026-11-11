@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, Switch, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Switch, View, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { resumePoint, useHistory } from '../../contexts/HistoryContext';
@@ -7,7 +7,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import type { VideoResult } from '../../data/types';
 import {
-  VideoDetails, compactViews, formatPublishDate, getVideo, relatedMore, watchUrl,
+  VideoDetails, compactViews, formatPublishDate, getVideo, relatedMore,
 } from '../../utils/youtube';
 import { confirmHideChannel, openChannel } from '../../utils/nav';
 import { isIskconVideo, learnFrom } from '../../utils/iskcon';
@@ -327,6 +327,17 @@ export default function WatchScreen() {
 
   useEffect(() => () => savePosition(), [savePosition]);
 
+  // A video that can't play here (owner blocks embedding, removed...): with
+  // autoplay on, move on to the next one after a short notice.
+  useEffect(() => {
+    if (!failure || !settings.autoplay) return;
+    const timer = setTimeout(() => {
+      const next = relatedRef.current[0];
+      if (next) playOtherRef.current(next);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [failure, settings.autoplay]);
+
   // No load event within 15 s: stop the spinner and offer alternatives.
   useEffect(() => {
     if (!loading) return;
@@ -416,6 +427,9 @@ export default function WatchScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
           <Ionicons name="alert-circle-outline" size={48} color="#aaa" />
           <Txt size={16} style={{ color: '#eee', textAlign: 'center' }}>{failure}</Txt>
+          {settings.autoplay && related[0] ? (
+            <Txt size={13} style={{ color: '#aaa' }}>Playing the next video in a moment…</Txt>
+          ) : null}
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <Pill label="Try again" icon="refresh" onPress={() => {
               setFailure(null);
@@ -424,7 +438,6 @@ export default function WatchScreen() {
               setPlayerKey((k) => k + 1);
             }} />
             {related[0] ? <Pill label="Next video" icon="play-skip-forward" onPress={() => playOther(related[0])} /> : null}
-            <Pill label="Watch on YouTube" icon="open-outline" onPress={() => Linking.openURL(watchUrl(videoId)).catch(() => {})} />
           </View>
         </View>
       ) : (
