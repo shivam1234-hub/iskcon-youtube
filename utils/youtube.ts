@@ -1,4 +1,5 @@
 import type { ChannelResult, SearchItem, VideoResult } from '../data/types';
+import { httpGetJson, httpGetText, httpPostJson } from './ytFetch';
 
 /**
  * Keyless YouTube data: search, video details + related, channel pages and
@@ -87,10 +88,11 @@ function extractJson(html: string, varName: string): any | null {
   }
 }
 
+// The transport lives in ./ytFetch (plain fetch on the phone; the Electron
+// main process on desktop, where a browser renderer would hit CORS). All the
+// parsing below is shared.
 async function getPage(url: string, signal?: AbortSignal): Promise<string> {
-  const res = await fetch(url, { headers: HEADERS, signal });
-  if (!res.ok) throw new Error(`YouTube returned ${res.status}`);
-  return res.text();
+  return httpGetText(url, HEADERS, signal);
 }
 
 async function innertube(
@@ -99,22 +101,17 @@ async function innertube(
   body: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<any> {
-  const res = await fetch(
+  return httpPostJson(
     `https://www.youtube.com/youtubei/v1/${endpoint}?key=${session.apiKey}&prettyPrint=false`,
-    {
-      method: 'POST',
-      headers: { ...HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context: {
-          client: { clientName: 'WEB', clientVersion: session.clientVersion, hl: 'en', gl: 'US' },
-        },
-        ...body,
-      }),
-      signal,
-    },
+    { ...HEADERS, 'Content-Type': 'application/json' },
+    JSON.stringify({
+      context: {
+        client: { clientName: 'WEB', clientVersion: session.clientVersion, hl: 'en', gl: 'US' },
+      },
+      ...body,
+    }),
+    signal,
   );
-  if (!res.ok) throw new Error(`YouTube returned ${res.status}`);
-  return res.json();
 }
 
 // ---------------------------------------------------------------------------
@@ -316,12 +313,10 @@ export async function searchMore(
 /** Typeahead suggestions — the endpoint YouTube's own search box uses. */
 export async function suggest(query: string, signal?: AbortSignal): Promise<string[]> {
   if (!query.trim()) return [];
-  const res = await fetch(
+  const json = await httpGetJson(
     `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl=en&q=${encodeURIComponent(query)}`,
-    { signal },
+    signal,
   );
-  if (!res.ok) return [];
-  const json = await res.json();
   return Array.isArray(json?.[1]) ? json[1].map(String) : [];
 }
 

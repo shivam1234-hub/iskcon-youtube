@@ -1,0 +1,58 @@
+{
+  "name": "youtube-desktop",
+  "productName": "YouTube",
+  "version": "1.0.9",
+  "description": "YouTube - Windows desktop build",
+  "main": "main.js",
+  "private": true,
+  "license": "ISC",
+  "author": "YouTube",
+  "scripts": {
+    "export": "node scripts/export-web.js",
+    "start": "electron .",
+    "dev": "npm run export && electron .",
+    "dist": "npm run export && electron-builder --win --x64",
+    "dist:dir": "npm run export && electron-builder --win --dir --x64"
+  },
+  "devDependencies": {
+    "electron": "44.4.4",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.vanitube.desktop",
+    "productName": "YouTube",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "float.html",
+      "lib/**/*",
+      "web/**/*",
+      "build/icon.png",
+      "build/icon.ico"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YouTube",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "YouTube-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "YouTube-${version}-portable.${ext}"
+    }
+  }
+}
