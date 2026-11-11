@@ -1,6 +1,6 @@
 {
   "name": "vani-tube",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "ISKCON Tube - ISKCON-only video app with picture-in-picture",
   "main": "index.js",
   "scripts": {
