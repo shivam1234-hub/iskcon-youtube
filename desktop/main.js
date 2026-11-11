@@ -10,6 +10,25 @@ const fs = require('node:fs');
 const { startServer } = require('./lib/server');
 const net = require('./lib/net');
 
+// Startup safety net: a startup failure must never leave a windowless process
+// holding the single-instance lock (every later launch would silently do
+// nothing). Log to userData/startup.log and tell the user.
+function startupLog(...parts) {
+  try {
+    fs.appendFileSync(path.join(app.getPath('userData'), 'startup.log'),
+      `[${new Date().toISOString()}] ${parts.map(String).join(' ')}\n`);
+  } catch { /* best-effort */ }
+}
+function fatal(where, err) {
+  startupLog('FATAL', where, err && err.stack ? err.stack : err);
+  try {
+    dialog.showErrorBox(`${app.getName()} could not start`,
+      `${where}: ${err && err.message ? err.message : err}\n\nDetails: ${path.join(app.getPath('userData'), 'startup.log')}`);
+  } catch { /* no UI */ }
+}
+process.on('uncaughtException', (err) => fatal('Unexpected error', err));
+process.on('unhandledRejection', (err) => fatal('Unexpected error', err));
+
 const APP_NAME = 'YouTube';
 // Same userData folder whether run from source or installed.
 app.setName(APP_NAME);
@@ -116,6 +135,11 @@ function createWindow() {
     },
   });
   if (state.maximized) mainWindow.maximize();
+  // Never stay invisible: show after 4 s even if ready-to-show never fires.
+  const reveal = () => { if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.show(); };
+  setTimeout(() => { if (!process.env.YT_SHOTS_HIDDEN) reveal(); }, 4000);
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => { startupLog('did-fail-load', code, desc, url); reveal(); });
+  mainWindow.webContents.on('render-process-gone', (_e, d) => { startupLog('render-process-gone', JSON.stringify(d)); reveal(); });
   mainWindow.once('ready-to-show', () => {
     if (!process.env.YT_SHOTS_HIDDEN) mainWindow.show();
   });
@@ -361,6 +385,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
+    startupLog('start', app.getVersion(), process.platform, process.arch, app.getPath('exe'));
     if (!fs.existsSync(path.join(WEB_DIR, 'index.html'))) {
       dialog.showErrorBox('Web bundle missing', `No web export at:\n${WEB_DIR}\n\nRun "npm run export" in desktop/.`);
       app.quit();
