@@ -69,14 +69,26 @@ function bgColor() {
 }
 
 function guardNavigation(win) {
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/.test(url) && !url.startsWith(origin)) shell.openExternal(url);
+  // Links the app itself opens ("Watch on YouTube") go to the browser. Clicks
+  // inside the embedded player (logo, title, end-screen videos) are swallowed,
+  // as on the phone: they would lead into the full, unfiltered YouTube.
+  win.webContents.setWindowOpenHandler(({ url, referrer }) => {
+    const fromApp = !referrer?.url || referrer.url.startsWith(origin);
+    if (fromApp && /^https?:/.test(url) && !url.startsWith(origin)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith(origin)) {
       event.preventDefault();
       if (/^https?:/.test(url)) shell.openExternal(url);
+    }
+  });
+  win.webContents.on('will-frame-navigate', (event) => {
+    if (event.isMainFrame) return;
+    const url = event.url || '';
+    // The player frame may only ever show an embed.
+    if (/^https:\/\/(www\.)?youtube(-nocookie)?\.com\//.test(url) && !/\/embed\//.test(url)) {
+      event.preventDefault();
     }
   });
 }
@@ -366,6 +378,18 @@ if (!app.requestSingleInstanceLock()) {
     // microphone or location.
     const allowed = new Set(['fullscreen', 'clipboard-sanitized-write', 'clipboard-read']);
     session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(allowed.has(permission)));
+
+    // Channel pictures (yt3.ggpht.com / yt3.googleusercontent.com) refuse a
+    // foreign referrer; send them none, as a privacy-minded browser would.
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+      { urls: ['https://yt3.ggpht.com/*', 'https://yt3.googleusercontent.com/*', 'https://*.ggpht.com/*'] },
+      (details, cb) => {
+        const headers = { ...details.requestHeaders };
+        delete headers.Referer;
+        delete headers.referer;
+        cb({ requestHeaders: headers });
+      },
+    );
 
     if (process.platform === 'darwin' && app.dock) app.dock.setIcon(ICON);
     registerIpc();
