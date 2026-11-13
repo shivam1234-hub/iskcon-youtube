@@ -26,15 +26,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="shorts"
-        options={{
-          title: 'Shorts',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'play-circle' : 'play-circle-outline'} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="subscriptions"
         options={{
           title: 'Subscriptions',

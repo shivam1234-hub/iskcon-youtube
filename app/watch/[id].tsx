@@ -29,6 +29,7 @@ import {
   ACTION_PAUSE, ACTION_RESUME, clearVideoNotification, prepareVideoNotifications,
   showVideoNotification,
 } from '../../utils/videoNotification';
+import { onMediaButton, releaseMediaButtons, setMediaButtonsState } from '../../utils/mediaButtons';
 import { confirmHideChannel, openChannel, shareVideo } from '../../utils/nav';
 import { isIskconVideo, learnFrom } from '../../utils/iskcon';
 import { C } from '../../theme/colors';
@@ -318,9 +319,22 @@ export default function WatchScreen() {
     return () => sub.remove();
   }, [pauseVideo, playVideo]);
 
+  // Earphone / Bluetooth play-pause button.
+  useEffect(() => onMediaButton(async (action) => {
+    const play = action === 'play';
+    if (play) playVideo(); else pauseVideo();
+    playingRef.current = play;
+    setIsPlaying(play);
+    setMediaButtonsState(play, videoRef.current.title || 'Video');
+    if (notifIdRef.current) {
+      notifIdRef.current = await showVideoNotification(videoRef.current.title, play);
+    }
+  }), [pauseVideo, playVideo]);
+
   useEffect(
     () => () => {
       clearVideoNotification(notifIdRef.current);
+      releaseMediaButtons();
       savePosition();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -394,12 +408,14 @@ export default function WatchScreen() {
       playingRef.current = true;
       setIsPlaying(true);
       setPipPlaying(true);
+      setMediaButtonsState(true, videoRef.current.title || 'Video');
       return;
     }
     if (msg === 'state:paused' || msg === 'state:ended') {
       playingRef.current = false;
       setIsPlaying(false);
       setPipPlaying(false);
+      setMediaButtonsState(false, videoRef.current.title || 'Video');
       if (msg === 'state:ended') {
         // Finished: next open starts from the beginning.
         updatePosition(videoId, durationRef.current, durationRef.current);
